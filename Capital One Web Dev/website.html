@@ -1,0 +1,303 @@
+<html lang="en">    
+<head>
+    <title>Find Dining</title>
+    <!-- This is a comment -->
+    <meta charset = "UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta author = "Paul Na">
+    <meta name="description" content="Restaurant Locator using Yelp API">
+    <!-- From https://allfont.net/download/norwester/ -->
+    <link href="http://allfont.net/allfont.css?fonts=norwester" rel="stylesheet" type="text/css" />
+    <script>
+        'use strict';
+        const yelp = require('yelp-fusion');
+        const apiKey = 'N1cTbGPxoLLXIqvqLRz4-JUC5NKboVXRdgeJdiqWo31KKA2mWjfxD2UHoEZmgIaDemMK4rXFOi1p6yDo11dnikrGyFoii5vmPlp60gqrM1hIwJ5_qlNVqCWoSNVfXnYx';
+
+        var searchRequest;
+        const client = yelp.client(apiKey);
+    </script>
+    <style>
+        * {box-sizing: border-box;}
+        /* General text styles */
+        h1 {
+            font-family: "Arial Black", Gadget, sans-serif;
+            padding: 0;
+            margin: 0;
+        }
+        h2 {
+            font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+            padding: 0;
+            margin: 0;
+        }
+        body {
+            font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+            padding: 0;
+            margin: 0;
+        }
+        p {
+            margin-left: 12px;
+        }
+        /* Set the size of the div element that contains the map */
+        #map {
+            height: 400px;  /* The height is 400 pixels */
+            width: 100%;  /* The width is the width of the web page */
+        }
+
+        /* Navigation bar */
+        .topnav {
+            overflow: hidden;
+            background-color: #e9e9e9;
+        }
+        .topnav a {
+            float:left;
+            display:block;
+            color:black;
+            text-align:center;
+            padding:14px 16px;
+            text-decoration:none;
+            font-size:17px;
+        }
+        /* link hover color change */
+        .topnav a:hover {
+            background-color:rgb(221,240,182);
+            color:black;
+        }
+        /* 'Active' element style */
+        .topnav a.active {
+            background-color:rgb(184, 229, 102);
+            color:white;
+        }
+
+        /* Search box style */
+        .args-container {
+            float: left;
+            outline:#ccc
+        }
+
+        input[type=text] {
+            padding: 6px;
+            border: none;
+            margin-top: 8px;
+            font-size: 17px;
+        }
+
+        /* Reformat with different screen sizes */
+        @media screen and (max-width:600px) {
+            .topnav .search-container {
+                float: none;
+            }
+            .topnav a, .topnav input[type=text], .topnav .search-container button {
+                float: none;
+                display: block;
+                text-align: left;
+                width: 100%;
+                margin: 0;
+                padding: 14px;
+            }
+            .topnav input[type=text] {
+                border: 1px solid #ccc;  
+            }
+        }
+
+        /* Grid of locations */
+        /**
+        * Position icons into circle (SO)
+        * http://stackoverflow.com/q/12813573/1397351 
+        */
+        .circle-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            padding: 2.8em; /*= 2em * 1.4 (2em = half the width of an img, 1.4 = sqrt(2))*/
+            border: dashed 1px;
+            border-radius: 50%;
+            margin: 1.75em auto 0;
+        }
+        .circle-container img { display: block; width: 100%; }
+        .deg0 { transform: translate(12em); } /* 12em = half the width of the wrapper */
+        .deg45 { transform: rotate(45deg) translate(12em) rotate(-45deg); }
+        .deg135 { transform: rotate(135deg) translate(12em) rotate(-135deg); }
+        .deg180 { transform: translate(-12em); }
+        .deg225 { transform: rotate(225deg) translate(12em) rotate(-225deg); }
+        .deg315 { transform: rotate(315deg) translate(12em) rotate(-315deg); }
+
+        /* this is just for showing the angle on hover */
+        .circle-container a:not(.center):before {
+            position: absolute;
+            width: 4em;
+            color: white;
+            opacity: 0;
+            background: rgba(0,0,0,.5);
+            font: 1.25em/3.45 Courier, monospace;
+            letter-spacing: 2px;
+            text-decoration: none;
+            text-indent: -2em;
+            text-shadow: 0 0 .1em deeppink;
+            transition: .7s; /* only works in Firefox */
+            content: attr(class)'°';
+        }
+        .circle-container a:hover:before { opacity: 1; }
+    </style>
+</head>
+
+<!-- Header of website -->
+<header style="background-color: rgb(184, 229, 102);">
+    <!-- I spent so (too?) long on this logo -->
+    <a href="website.html">
+    <img src="img/logo.png" alt="logo" width=180 height=120 align="left">
+    </a>
+    <h1 style="font-size:614%; text-align:center;"><font color = "#FFFFFF">
+        HANGRY?
+    </font></h1>
+    <link rel="icon" href="img/web-logo.png">   
+</header>
+
+
+<!-- Website Navigation -->
+<div class="topnav">
+    <a class="active" href="#home">Home</a>
+    <!-- <a href="#about">About</a> -->
+    <!-- <a href="#contact">Contact</a> -->
+</div>
+
+<!-- Search Container -->
+<div class="args-container" style="background-color: rgb(221,240,182);">
+    <form action="/action_page.php">
+        Search terms: <input id='search' type="text" placeholder="Search...">
+        Latitude: <input id='lat' type="text" placeholder="0.0">
+        Longitude: <input id='lon' type="text" placeholder="0.0">
+    </form>
+</div>
+<script>
+    searchRequest = {
+        term: document.getElementById('search'),
+    };
+    var url = "https://api.yelp.com/v3/businesses/search"
+    client.search(searchRequest).then(response => {
+        const firstResult = response.jsonBody.businesses[0];
+        const prettyJson = JSON.stringify(firstResult, null, 4);
+        console.log(prettyJson);
+    }).catch(e => {
+        console.log(e);
+    });
+</script>
+
+
+<body>
+    <!-- Get user coords -->
+    <p>Click the button to get your coordinates.</p>
+    <button onclick="getLocation()">Your Location</button>
+    <p id="USER"></p>
+
+    <!-- HTML Geolocation code adapted from: 
+    https://www.w3schools.com/html/html5_geolocation.asp -->
+    <!-- <form action=""></form>
+    <form action=""></form>
+    <form action=""></form> -->
+    <script>
+        var x = document.getElementById("USER");
+        
+        function getLocation() {
+            // If Geolocation is supported, run getCurrentPosition method
+            if (navigator.geolocation) { 
+                // returns user's position
+                return navigator.geolocation.watchPosition(showPosition);
+            // Otherwise, don't 
+            } else {
+                x.innerHTML = "Geolocation is not supported by this browser.";
+            }
+        }
+        function showPosition(position) {
+            x.innerHTML = "Latitude: " + position.coords.latitude + "<br>Longitude: " + position.coords.longitude;
+        }
+        
+
+        // function showPosition(position) {
+        //     x.innerHTML = "Latitude: " + position.coords.latitude +
+        //     "<br>Longitude: " + position.coords.longitude;
+        // }
+    </script>
+    
+    <div class="w3-container">
+        <p><br\></p>
+        <table class="w3-table w3-bordered w3-striped">
+            <thead>
+                <tr>
+                    <th>RestaurantName</th>
+                    <th>Rating</th>
+                    <th>Address</th>
+                </tr>
+            </thead>
+            <tbody id="mydata">
+                <tr>
+                    <td>[[name]]</td>
+                    <td>[[rating]]</td>
+                    <td>[[address]]</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script src="jquery.min.js"></script>
+    <script src="jquery.miranda.min.js"></script>
+    <script>
+        let response = await fetch()
+        var myurl = "https://cors-anywhere.hferokuapp.com/https://api.yelp.com/v3/businesses/search?term=by-chloe&location=boston"
+        $.ajax({
+            url: myurl,
+            headers: {
+                'Authorization':'Bearer N1cTbGPxoLLXIqvqLRz4-JUC5NKboVXRdgeJdiqWo31KKA2mWjfxD2UHoEZmgIaDemMK4rXFOi1p6yDo11dnikrGyFoii5vmPlp60gqrM1hIwJ5_qlNVqCWoSNVfXnYx'
+            },
+            method: 'GET',
+            dataType: 'json',
+            success: function(data){
+                // Grab the results from the API JSON return
+                var totalresults = data.total;
+                // If our results are greater than 0, continue
+                if (totalresults > 0){
+                    // Display a header on the page with the number of results
+                    $('#results').append('<h5>We discovered ' + totalresults + ' results!</h5>');
+                    // Itirate through the JSON array of 'businesses' which was returned by the API
+                    $.each(data.businesses, function(i, item) {
+                        // Store each business's object in a variable
+                        var id = item.id;
+                        var alias = item.alias;
+                        var phone = item.display_phone;
+                        var image = item.image_url;
+                        var name = item.name;
+                        var rating = item.rating;
+                        var reviewcount = item.review_count;
+                        var address = item.location.address1;
+                        var city = item.location.city;
+                        var state = item.location.state;
+                        var zipcode = item.location.zip_code;
+                        // Append our result into our page
+                        $('#results').append('<div id="' + id + '" style="margin-top:50px;margin-bottom:50px;"><img src="' + image + '" style="width:200px;height:150px;"><br>We found <b>' + name + '</b> (' + alias + ')<br>Business ID: ' + id + '<br> Located at: ' + address + ' ' + city + ', ' + state + ' ' + zipcode + '<br>The phone number for this business is: ' + phone + '<br>This business has a rating of ' + rating + ' with ' + reviewcount + ' reviews.</div>');
+                });
+                } else {
+                    // If our results are 0; no businesses were returned by the JSON therefor we display on the page no results were found
+                    $('#results').append('<h5>We discovered no results!</h5>');
+                    var output = document.getElementById('output');
+                    output.innerHTML = 'Failed authentication';
+                }
+            }
+        })
+    </script>
+    <div class='circle-container'>
+        <a href='#' class='center'><img src='/img/searching-img.png'></a>
+    </div>
+
+    <!-- <script>
+        // Function that creates a Google map with user's location
+        function initMap() {
+            // Get User location
+            var uluru = {lat: -25.344, lng: 131.036};
+            // The map, centered at Uluru
+            var map = new google.maps.Map(
+                document.getElementById('map'), {zoom: 4, center: uluru});
+            // The marker, positioned at Uluru
+            var marker = new google.maps.Marker({position: uluru, map: map});
+        }
+    </script> -->
+    
+</body>
+</html>
