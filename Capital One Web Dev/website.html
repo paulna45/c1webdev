@@ -8,13 +8,16 @@
     <meta name="description" content="Restaurant Locator using Yelp API">
     <!-- From https://allfont.net/download/norwester/ -->
     <link href="http://allfont.net/allfont.css?fonts=norwester" rel="stylesheet" type="text/css" />
+    <script
+            src="http://code.jquery.com/jquery-3.4.1.js"
+            integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+            crossorigin="anonymous"></script>
     <script>
         'use strict';
-        const yelp = require('yelp-fusion');
-        const apiKey = 'N1cTbGPxoLLXIqvqLRz4-JUC5NKboVXRdgeJdiqWo31KKA2mWjfxD2UHoEZmgIaDemMK4rXFOi1p6yDo11dnikrGyFoii5vmPlp60gqrM1hIwJ5_qlNVqCWoSNVfXnYx';
-
+        var apiKey = 'Bearer N1cTbGPxoLLXIqvqLRz4-JUC5NKboVXRdgeJdiqWo31KKA2mWjfxD2UHoEZmgIaDemMK4rXFOi1p6yDo11dnikrGyFoii5vmPlp60gqrM1hIwJ5_qlNVqCWoSNVfXnYx';
+        var cors_anywhere_url = 'https://cors-anywhere.herokuapp.com'
+        var yelp_search_url = 'https://api.yelp.com/v3/businesses/search'
         var searchRequest;
-        const client = yelp.client(apiKey);
     </script>
     <style>
         * {box-sizing: border-box;}
@@ -37,11 +40,7 @@
         p {
             margin-left: 12px;
         }
-        /* Set the size of the div element that contains the map */
-        #map {
-            height: 400px;  /* The height is 400 pixels */
-            width: 100%;  /* The width is the width of the web page */
-        }
+        
 
         /* Navigation bar */
         .topnav {
@@ -164,15 +163,27 @@
 <div class="args-container" style="background-color: rgb(221,240,182);">
     <form action="/action_page.php">
         Search terms: <input id='search' type="text" placeholder="Search...">
-        Latitude: <input id='lat' type="text" placeholder="0.0">
+        Latitude: <input id='lat' type="text" placeholder="0.0"> 
         Longitude: <input id='lon' type="text" placeholder="0.0">
     </form>
 </div>
 <script>
     searchRequest = {
-        term: document.getElementById('search'),
-    };
-    var url = "https://api.yelp.com/v3/businesses/search"
+        url: cors_anywhere_url + '/' + yelp_search_url,
+        data: {term: document.getElementById('search'),
+               latitude: document.getElementById('lat'),
+               longitude: document.getElementById('lon')},
+        header: {'Authorization': apiKey},
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log('AJAX error, jqXHR = ', jqXHR, ', testStatus = ', textStatus, ', errorThrown = ', errorThrown)
+        }
+    }
+    $.ajax(searchRequest)
+            .done(function(response) {
+                console.log('typeof response = ' + typeof response)
+                console.log('response = ', response)
+            })
+    var url = "https://api.yelp.com/v3/businesses/search?term=" + document.getElementById('search') + "&latitude="+document.getElementById('lat') + "&longitude="+document.getElementById('lon')
     client.search(searchRequest).then(response => {
         const firstResult = response.jsonBody.businesses[0];
         const prettyJson = JSON.stringify(firstResult, null, 4);
@@ -237,15 +248,12 @@
             </tbody>
         </table>
     </div>
-    <script src="jquery.min.js"></script>
-    <script src="jquery.miranda.min.js"></script>
     <script>
-        let response = await fetch()
         var myurl = "https://cors-anywhere.hferokuapp.com/https://api.yelp.com/v3/businesses/search?term=by-chloe&location=boston"
         $.ajax({
             url: myurl,
             headers: {
-                'Authorization':'Bearer N1cTbGPxoLLXIqvqLRz4-JUC5NKboVXRdgeJdiqWo31KKA2mWjfxD2UHoEZmgIaDemMK4rXFOi1p6yDo11dnikrGyFoii5vmPlp60gqrM1hIwJ5_qlNVqCWoSNVfXnYx'
+                'Authorization':apiKey
             },
             method: 'GET',
             dataType: 'json',
@@ -286,18 +294,7 @@
         <a href='#' class='center'><img src='/img/searching-img.png'></a>
     </div>
 
-    <!-- <script>
-        // Function that creates a Google map with user's location
-        function initMap() {
-            // Get User location
-            var uluru = {lat: -25.344, lng: 131.036};
-            // The map, centered at Uluru
-            var map = new google.maps.Map(
-                document.getElementById('map'), {zoom: 4, center: uluru});
-            // The marker, positioned at Uluru
-            var marker = new google.maps.Marker({position: uluru, map: map});
-        }
-    </script> -->
+    
     
 </body>
 </html>
